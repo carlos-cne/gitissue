@@ -19,15 +19,21 @@ import RepositoryItem from './RepositoryItem';
 export default class Main extends Component {
   state = {
     repository: '',
-    loading: false,
+    loading: true,
     repositories: [],
     error: '',
+    refreshing: false,
   };
 
   async componentDidMount() {
-    const repositories = await AsyncStorage.getItem('@Gitissue:repositories');
-    !!repositories && this.setState({ repositories: JSON.parse(repositories) });
+    this.loadRepositories();
   }
+
+  loadRepositories = async () => {
+    this.setState({ refreshing: true });
+    const repositories = JSON.parse(await AsyncStorage.getItem('@Gitissue:repositories'));
+    this.setState({ repositories: repositories || [], loading: false, refreshing: false });
+  };
 
   addRepository = async () => {
     const { repository, repositories } = this.state;
@@ -59,19 +65,20 @@ export default class Main extends Component {
 
   saveInStorage = async () => {
     const { repositories } = this.state;
-    await AsyncStorage.removeItem('@Gitissue:repositories');
     await AsyncStorage.setItem('@Gitissue:repositories', JSON.stringify(repositories));
   };
 
   renderRepositoryItem = ({ item }) => <RepositoryItem repository={item} />;
 
   renderRepositoryList = () => {
-    const { repositories } = this.state;
+    const { repositories, refreshing } = this.state;
     return (
       <FlatList
         data={repositories}
         keyExtractor={item => String(item.id)}
         renderItem={this.renderRepositoryItem}
+        onRefresh={this.loadRepositories}
+        refreshing={refreshing}
       />
     );
   };
